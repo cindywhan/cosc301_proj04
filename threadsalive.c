@@ -74,20 +74,20 @@ void ta_yield(void) {
 		// resize if needed
 		array_resize();
 	}
-	int current = nextout;
-	nextout = (nextout + 1) % size;
+	int curr = current;
+	current = (current + 1) % size;
 	// switch to the next ready thread
-	swapcontext(&threads[current], &threads[nextout]);
+	swapcontext(&threads[curr], &threads[current]);
     return;
 } 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
 int ta_waitall(void) {
-	printf("count: %d, size: %d, nextout: %d. \n", count, size, nextout);
+	printf("count: %d, size: %d, nextout: %d. \n", count, size, current);
 	// run all ready threads
 	for (int i = 0; i < count; i++) {
 		// switch to next thread
-		swapcontext(&main, &threads[nextout]);
-		nextout = (nextout + 1) % size;
+		swapcontext(&main, &threads[current]);
+		current = (current + 1) % size;
 	}
 	// free the queue
 	free(threads);
