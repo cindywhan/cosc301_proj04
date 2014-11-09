@@ -90,7 +90,7 @@ void ta_yield(void) {
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
 int ta_waitall(void) {
 	// run all ready threads
-	while (queue->size > 1) {
+	while (queue->size >= 1) {
 		// switch to the next ready thread
 		swapcontext(&queue->tail->next->thread, &queue->head->thread);
 		node *temp = queue->head;
@@ -100,9 +100,9 @@ int ta_waitall(void) {
 	}
 	// free the last node
 	free(queue->head);
-	// free the queuq
+	// free the queue
 	free(queue);
-	return 0; // return 0 
+	return 0;
 }
 
 
