@@ -25,18 +25,7 @@ typedef struct {
 /* ***************************
        stage 1 functions
    *************************** */
-   
-typedef struct node{
-	ucontext_t thread;
-	struct node *next;
-}node;
-
-typedef struct { 
-	node *head;
-	node *tail;
-	int size;
-} thread_queue;
-
+  
 void ta_libinit(void);
 void ta_create(void (*)(void *), void *);
 void ta_yield(void);

@@ -16,93 +16,87 @@
      stage 1 library functions
    ******************************/
 // scheduling queue
-static thread_queue *queue;
+static ucontext_t *threads; 
+static ucontext_t main; // store the main thread seperately 
+static int nextin, nextout, count, size;
+
 #define STACKSIZE 8192
+
+void array_resize() {
+	// resizes an array of contexts
+	ucontext_t *new = malloc(size*2*sizeof(ucontext_t)); //double the size of the array
+	// copy over all the existing threads
+	for (int i = 0; i < size; i++){
+		new[i] = threads[nextout];
+		nextout = (nextout + 1) % size;
+	}
+	ucontext_t *temp = threads;
+	threads = new;
+	free(temp); // free old array;
+	nextout = 0;
+	nextin = size;
+	size = size*2;
+}
+
 void ta_libinit(void) {
-	// initialize the queue
-	queue = malloc(sizeof(queue));
-	node *n = malloc(sizeof(node));
-	n->next = NULL;
 	// set up the main thread in the library
-	swapcontext(&n->thread, &n->thread);
-	// set up the queue
-	queue->head = n;
-	queue->tail = n;
-	queue->size = 1;
+	getcontext(&main);
+	threads = malloc(32*sizeof(ucontext_t)); // start withh 32 item array
+	nextin = 0; 
+	nextout = 0;
+	count = 0; // current # of threads
+	size = 32; // size of the array
     return;
 }
 
 void ta_create(void (*func)(void *), void *arg) {
-	// make a new node
+	// resize the array if needed
+	if (count == size){
+		array_resize();
+	}
 	unsigned char *stack = (unsigned char *)malloc(STACKSIZE);
 	assert(stack);
-	node *n = malloc(sizeof(node));
-	getcontext(&n->thread); // initial context for thread
+	getcontext(&threads[nextin]); // initial context for thread
 	// set up the thread stack
-	n->thread.uc_stack.ss_sp = stack;
-	n->thread.uc_stack.ss_size = STACKSIZE;
+	threads[nextin].uc_stack.ss_sp = stack;
+	threads[nextin].uc_stack.ss_size = STACKSIZE;
 	// set thread entry point
-	makecontext(&n->thread, (void(*)(void))*func, 1, arg);
-	// add the first thread to the queue
-	if (queue->size == 1){
-		// set up the link to the main thread
-		n->thread.uc_link = &queue->head->thread;
-		n->next = queue->head;
-		// update head and tail
-		queue->head = n;
-		queue->tail = n;
-		// update size
-		queue->size++;
-	}
-	else{
-		// place the thread at the end of the ready queue
-		n->thread.uc_link = &queue->tail->next->thread;
-		n->next = queue->tail->next;
-		queue->tail->thread.uc_link = &n->thread;
-		queue->tail->next = n;
-		// update tail and size
-		queue->tail = n;
-		queue->size++;
-	}
+	makecontext(&threads[nextin], (void(*)(void))*func, 1, arg);
+	// set up the link to the main thread
+	threads[nextin].uc_link = &main;
+	// update nextin and count
+	nextin = (nextin + 1) % size; // acount for warp around
+	count++;
     return;
 }
 
 void ta_yield(void) {
-	// put current thread in a new node
-	node *n = malloc(sizeof(node));
-	// place the thread at the end of the ready queue
-	n->thread.uc_link = &queue->tail->next->thread;
-	n->next = queue->tail->next;
-	queue->tail->thread.uc_link = &n->thread;
-	queue->tail->next = n;
-	// update tail and size
-	queue->tail = n;
-	queue->size++;
+	// put self at the end of the queue
+	if (count == size){
+		// resize if needed
+		array_resize();
+	}
+	getcontext(&threads[nextin]);
 	// switch to the next ready thread
-	swapcontext(&n->thread, &queue->head->thread);
-	// update the head and size
-	node *temp = queue->head;
-	queue->head = queue->head->next;
-	queue->size--;
-	free(temp); // free the node
+	swapcontext(&threads[nextin], &threads[nextout]);
+	nextout = (nextout + 1) % size;
+	nextin = (nextin + 1) % size;
     return;
-}
+} 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
 int ta_waitall(void) {
 	// run all ready threads
-	while (queue->size >= 1) {
-		// switch to the next ready thread
-		swapcontext(&queue->tail->next->thread, &queue->head->thread);
-		node *temp = queue->head;
-		queue->head = queue->head->next;
-		queue->size--;
-		free(temp); // free the node
+	for (int i = 0; i < count; i++) {
+		// switch to next thread
+		swapcontext(&main, &threads[nextout]);
+		nextout = (nextout + 1) % size;
 	}
-	// free the last node
-	free(queue->head);
 	// free the queue
-	free(queue);
-	return 0;
+	free(threads);
+	if (count == 0){
+		return 0;
+	}
+	return -1;
 }
 
 
