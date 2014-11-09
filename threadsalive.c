@@ -24,7 +24,7 @@ void ta_libinit(void) {
 	node *n = malloc(sizeof(node));
 	n->next = NULL;
 	// set up the main thread in the library
-	swap(&n->thread, &n->thread);
+	swapcontext(&n->thread, &n->thread);
 	// set up the queue
 	queue->head = n;
 	queue->tail = n;
@@ -42,7 +42,7 @@ void ta_create(void (*func)(void *), void *arg) {
 	n->thread.uc_stack.ss_sp = stack;
 	n->thread.uc_stack.ss_size = STACKSIZE;
 	// set thread entry point
-	makecontext(&n->thread, (*func)(void *), 1, *arg);
+	makecontext(&n->thread, (void(*)(void))*func, 1, arg);
 	// add the first thread to the queue
 	if (queue->size == 1){
 		// set up the link to the main thread
@@ -68,10 +68,30 @@ void ta_create(void (*func)(void *), void *arg) {
 }
 
 void ta_yield(void) {
+	// put current thread in a new node
+	node *n = malloc(sizeof(node));
+	// place the thread at the end of the ready queue
+	n->thread.uc_link = &queue->tail->thread;
+	n->next = queue->tail->next;
+	queue->tail->thread.uc_link = &n->thread;
+	queue->tail->next = n;
+	// update tail and size
+	queue->tail = n;
+	queue->size++;
+	// start the next ready thread
+	ucontext_t next_t = queue->head->thread;
+	// update the head and size
+	node *temp = queue->head;
+	queue->head = queue->head->next;
+	queue->size--;
+	free(temp); // free the node
+	// switch to the next thread
+	swapcontext(&n->thread, &next_t);
     return;
 }
 
 int ta_waitall(void) {
+	
     return -1;
 }
 
