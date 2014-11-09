@@ -82,7 +82,7 @@ void ta_yield(void) {
 } 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
 int ta_waitall(void) {
-	printf("count: %d, size: %d, nextout: %d. \n", count, size, current);
+	fprintf("count: %d, size: %d, nextout: %d. \n", count, size, current);
 	// run all ready threads
 	for (int i = 0; i < count; i++) {
 		// switch to next thread
