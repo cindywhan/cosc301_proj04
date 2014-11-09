@@ -56,7 +56,7 @@ void ta_create(void (*func)(void *), void *arg) {
 	}
 	else{
 		// place the thread at the end of the ready queue
-		n->thread.uc_link = &queue->tail->thread;
+		n->thread.uc_link = &queue->tail->next->thread;
 		n->next = queue->tail->next;
 		queue->tail->thread.uc_link = &n->thread;
 		queue->tail->next = n;
@@ -71,28 +71,38 @@ void ta_yield(void) {
 	// put current thread in a new node
 	node *n = malloc(sizeof(node));
 	// place the thread at the end of the ready queue
-	n->thread.uc_link = &queue->tail->thread;
+	n->thread.uc_link = &queue->tail->next->thread;
 	n->next = queue->tail->next;
 	queue->tail->thread.uc_link = &n->thread;
 	queue->tail->next = n;
 	// update tail and size
 	queue->tail = n;
 	queue->size++;
-	// start the next ready thread
-	ucontext_t next_t = queue->head->thread;
+	// switch to the next ready thread
+	swapcontext(&n->thread, &queue->head->thread);
 	// update the head and size
 	node *temp = queue->head;
 	queue->head = queue->head->next;
 	queue->size--;
 	free(temp); // free the node
-	// switch to the next thread
-	swapcontext(&n->thread, &next_t);
     return;
 }
-
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
 int ta_waitall(void) {
-	
-    return -1;
+	// run all ready threads
+	while (queue->size > 1) {
+		// switch to the next ready thread
+		swapcontext(&queue->tail->next->thread, &queue->head->thread);
+		node *temp = queue->head;
+		queue->head = queue->head->next;
+		queue->size--;
+		free(temp); // free the node
+	}
+	// free the last node
+	free(queue->head);
+	// free the queuq
+	free(queue);
+	return 0; // return 0 
 }
 
 
