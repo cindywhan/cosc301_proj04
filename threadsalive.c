@@ -8,18 +8,62 @@
 #include <assert.h>
 #include <strings.h>
 #include <string.h>
+#include <ucontext.h>
 
 #include "threadsalive.h"
 
-/* ***************************** 
+/****************************** 
      stage 1 library functions
-   ***************************** */
-
+   ******************************/
+// scheduling queue
+static thread_queue *queue;
+#define STACKSIZE 8192
 void ta_libinit(void) {
+	// initialize the queue
+	queue = malloc(sizeof(queue));
+	node *n = malloc(sizeof(node));
+	n->next = NULL;
+	// set up the main thread in the library
+	swap(&n->thread, &n->thread);
+	// set up the queue
+	queue->head = n;
+	queue->tail = n;
+	queue->size = 1;
     return;
 }
 
 void ta_create(void (*func)(void *), void *arg) {
+	// make a new node
+	unsigned char *stack = (unsigned char *)malloc(STACKSIZE);
+	assert(stack);
+	node *n = malloc(sizeof(node));
+	getcontext(&n->thread); // initial context for thread
+	// set up the thread stack
+	n->thread.uc_stack.ss_sp = stack;
+	n->thread.uc_stack.ss_size = STACKSIZE;
+	// set thread entry point
+	makecontext(&n->thread, (*func)(void *), 1, *arg);
+	// add the first thread to the queue
+	if (queue->size == 1){
+		// set up the link to the main thread
+		n->thread.uc_link = &queue->head->thread;
+		n->next = queue->head;
+		// update head and tail
+		queue->head = n;
+		queue->tail = n;
+		// update size
+		queue->size++;
+	}
+	else{
+		// place the thread at the end of the ready queue
+		n->thread.uc_link = &queue->tail->thread;
+		n->next = queue->tail->next;
+		queue->tail->thread.uc_link = &n->thread;
+		queue->tail->next = n;
+		// update tail and size
+		queue->tail = n;
+		queue->size++;
+	}
     return;
 }
 
