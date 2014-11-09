@@ -16,9 +16,9 @@
      stage 1 library functions
    ******************************/
 // scheduling queue
-static ucontext_t *threads; 
+static ucontext_t *threads;
 static ucontext_t main; // store the main thread seperately 
-static int nextin, nextout, count, size;
+static int current, count, size;
 
 #define STACKSIZE 8192
 
@@ -27,14 +27,13 @@ void array_resize() {
 	ucontext_t *new = malloc(size*2*sizeof(ucontext_t)); //double the size of the array
 	// copy over all the existing threads
 	for (int i = 0; i < size; i++){
-		new[i] = threads[nextout];
-		nextout = (nextout + 1) % size;
+		new[i] = threads[current];
+		current = (current + 1) % size;
 	}
 	ucontext_t *temp = threads;
 	threads = new;
 	free(temp); // free old array;
-	nextout = 0;
-	nextin = size;
+	current = 0;
 	size = size*2;
 }
 
@@ -42,8 +41,7 @@ void ta_libinit(void) {
 	// set up the main thread in the library
 	getcontext(&main);
 	threads = malloc(32*sizeof(ucontext_t)); // start withh 32 item array
-	nextin = 0; 
-	nextout = 0;
+	current = 0;
 	count = 0; // current # of threads
 	size = 32; // size of the array
     return;
@@ -56,16 +54,16 @@ void ta_create(void (*func)(void *), void *arg) {
 	}
 	unsigned char *stack = (unsigned char *)malloc(STACKSIZE);
 	assert(stack);
-	getcontext(&threads[nextin]); // initial context for thread
+	int insert_idx = (current + count + 1) % size;
+	getcontext(&threads[insert_idx]); // initial context for thread
 	// set up the thread stack
-	threads[nextin].uc_stack.ss_sp = stack;
-	threads[nextin].uc_stack.ss_size = STACKSIZE;
+	threads[insert_idx].uc_stack.ss_sp = stack;
+	threads[insert_idx].uc_stack.ss_size = STACKSIZE;
 	// set thread entry point
-	makecontext(&threads[nextin], (void(*)(void))*func, 1, arg);
+	makecontext(&threads[insert_idx], (void(*)(void))*func, 1, arg);
 	// set up the link to the main thread
-	threads[nextin].uc_link = &main;
-	// update nextin and count
-	nextin = (nextin + 1) % size; // acount for warp around
+	threads[insert_idx].uc_link = &main;
+	// update count
 	count++;
     return;
 }
@@ -76,15 +74,15 @@ void ta_yield(void) {
 		// resize if needed
 		array_resize();
 	}
-	getcontext(&threads[nextin]);
-	// switch to the next ready thread
-	swapcontext(&threads[nextin], &threads[nextout]);
+	int current = nextout;
 	nextout = (nextout + 1) % size;
-	nextin = (nextin + 1) % size;
+	// switch to the next ready thread
+	swapcontext(&threads[current], &threads[nextout]);
     return;
 } 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
 int ta_waitall(void) {
+	printf("count: %d, size: %d, nextout: %d. \n", count, size, nextout);
 	// run all ready threads
 	for (int i = 0; i < count; i++) {
 		// switch to next thread
