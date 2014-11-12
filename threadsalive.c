@@ -16,7 +16,7 @@
      stage 1 library functions
    ******************************/
 // scheduling queue
-static ucontext_t *threads;
+static thread *threads;
 static ucontext_t main; // store the main thread seperately 
 static int current, count, size;
 
@@ -32,7 +32,7 @@ void array_resize() {
 	}
 	ucontext_t *temp = threads;
 	threads = new;
-	free(temp); // free old array;
+	free(temp); // free old array
 	current = 0;
 	size = size*2;
 }
@@ -82,7 +82,7 @@ void ta_yield(void) {
 } 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
 int ta_waitall(void) {
-	fprintf("count: %d, size: %d, nextout: %d. \n", count, size, current);
+	printf("count: %d, size: %d, nextout: %d. \n", count, size, current);
 	// run all ready threads
 	for (int i = 0; i < count; i++) {
 		// switch to next thread

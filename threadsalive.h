@@ -26,6 +26,13 @@ typedef struct {
        stage 1 functions
    *************************** */
 
+typedef struct thread_node{
+	ucontext_t ctx;
+	int flag; // keeps track of other the function is done
+	
+
+} thread;
+
 void ta_libinit(void);
 void ta_create(void (*)(void *), void *);
 void ta_yield(void);
