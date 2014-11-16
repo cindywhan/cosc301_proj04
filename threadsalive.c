@@ -25,7 +25,7 @@ static int current, count, size;
 
 #define STACKSIZE 8192
 
-void array_resize() {
+static void array_resize() {
 	// resizes an array of contexts
 	thread_node **new = malloc(size*2*sizeof(thread_node *)); //double the size of the array
 	// copy over all the existing threads
@@ -43,7 +43,7 @@ void array_resize() {
 void ta_libinit(void) {
 	// set up the main thread in the library
 	getcontext(&main_t);
-	threads = malloc(32*sizeof(thread_node *)); // start withh 32 item array
+	threads = malloc(32*sizeof(thread_node *)); // start with 32 item array
 	current = 0;
 	count = 0; // current # of threads
 	size = 32; // size of the array
@@ -73,7 +73,7 @@ void ta_create(void (*func)(void *), void *arg) {
     return;
 }
 
-int find_next(){
+static int find_next(){
 	// returns the index of the next runable thread
 	int i = (current + 1) % count;
 	for (int n = 0; n < count; n++){

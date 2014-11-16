@@ -5,10 +5,10 @@ void thread1(void *arg)
 {
     int *i = (int *)arg;
     *i += 7;
-    fprintf(stderr, "begin t1: %d\n", *i);
+   fprintf(stderr, "begin t1: %d\n", *i);
     ta_yield();
     *i += 7;
-    fprintf(stderr, "end t1: %d\n", *i);
+   fprintf(stderr, "end t1: %d\n", *i);
 }
 
 void thread2(void *arg)
@@ -23,7 +23,8 @@ void thread2(void *arg)
 
 int main(int argc, char **argv)
 {
-    printf("Tester for stage 1.  Uses all four stage 1 library functions.\n");
+    printf("Tester for stage 1.  Uses all four stage
+     1 library functions.\n");
 
     ta_libinit();
     int i = 0;
