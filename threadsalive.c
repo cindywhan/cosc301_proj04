@@ -23,7 +23,7 @@ static thread_node **threads;
 static ucontext_t main_t; // store the main thread seperately 
 static int current, count, size;
 
-#define STACKSIZE 16384
+#define STACKSIZE 32768
 
 static void array_resize() {
 	// resizes an array of contexts
@@ -61,6 +61,7 @@ void ta_create(void (*func)(void *), void *arg) {
 	assert(stack);
 	threads[count] = malloc(sizeof(thread_node *));
 	threads[count]->flag = 0;
+	threads[count]->block = 0;
 	getcontext(&threads[count]->ctx); // initial context for thread
 	// set up the thread stack
 	threads[count]->ctx.uc_stack.ss_sp = stack;
@@ -78,7 +79,7 @@ static int find_next(){
 	// returns the index of the next runable thread
 	int i = (current + 1) % count;
 	for (int n = 0; n < count; n++){
-		if (threads[i]->flag == 0){ // check if the thread is done
+		if (threads[i]->flag == 0 && threads[i]->block == 0){ // check if the thread is done
 			return i;
 		}
 		i = (i + 1) % count; 
@@ -123,61 +124,52 @@ int ta_waitall(void) {
 
 void ta_sem_init(tasem_t *sem, int value) {
 	sem = malloc(sizeof(tasem_t)); // allocate space for the semaphore
-	sem->counter = value; 
-	ta_lock_init(sem->mutex); // initialize the mutex lock
+	sem->value = value; 
+	sem->num_blocked = 0;
+	sem->current = 0;
+	sem->blocked = malloc(sizeof(thread_node)*32);
 }
 
 void ta_sem_destroy(tasem_t *sem) {
-	ta_lock_destroy(sem->mutex); // destroy the lock
+	free(sem->blocked);
 	free(sem); // free the space
 	
 }
 
 void ta_sem_post(tasem_t *sem) {
-	ta_lock(sem->mutex); // lock the mutex
-	sem->counter++; // atomically increment
-	ta_unlock(sem->mutex); // unlock the mutex
+	sem->value++;
+	// release a blocked thread
+	if (sem->num_blocked > 0){
+		sem->blocked[current]->block = 0;
+		sem->current++;
+	}
 }
 
 void ta_sem_wait(tasem_t *sem) {
-	ta_lock(sem->mutex);
-	while(sem->counter <= 0){ // sleep until the counter is over 0
+	if (sem->value == 0){ 
+		sem->blocked[sem->num_blocked] = threads[current];
+		threads[current]->block = 1;
 		ta_yield();
 	}
-	sem->counter--;
-	ta_unlock(sem->mutex);
+	sem->value--;
 }
 
 void ta_lock_init(talock_t *mutex) {
-	// 0 is unlocked, 1 is locked
-	mutex = malloc(sizeof(talock_t));
-	mutex->flag = 0;
+	ta_sem_init(mutex->sem, 1);
 }
 
 void ta_lock_destroy(talock_t *mutex) {
-	free(mutex);
+	ta_sem_destroy(mutex->sem);
 }
 
-int cas(int *ptr, int old, int new) {
-	// compare and swap method to insure atomic operations
-	unsigned char ret;
-	__asm__ __volatile__ (
-		" lock\n"
-		" cmpxchgl %2,%1\n"
-		" sete %0\n"
-		: "=q" (ret), "=m" (*ptr)
-		: "r" (new), "m" (*ptr), "a" (old)
-		: "memory");
-	return ret;
-}
+
 
 void ta_lock(talock_t *mutex) {
-	while(cas(&mutex->flag, 0, 1) == 1)
-	{} // spin
+	ta_sem_wait(mutex->sem);
 }
 
 void ta_unlock(talock_t *mutex) {
-	mutex->flag = 0;
+	ta_sem_post(mutex->sem);
 }
 
 /* ***************************** 
