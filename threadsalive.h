@@ -4,18 +4,20 @@
 
 #ifndef __THREADSALIVE_H__
 #define __THREADSALIVE_H__
-
+#include <ucontext.h>
 /* ***************************
         type definitions
    *************************** */
 
-typedef struct {
 
-} tasem_t;
-
-typedef struct {
-
+typedef struct talock_t{
+	int flag;
 } talock_t;
+
+typedef struct {
+	int counter;
+	struct talock_t *mutex;
+} tasem_t;
 
 typedef struct {
 
@@ -26,11 +28,9 @@ typedef struct {
        stage 1 functions
    *************************** */
 
-typedef struct {
+typedef struct thread_node{
 	ucontext_t ctx;
 	int flag; // keeps track of other the function is done
-	
-
 } thread_node;
 
 void ta_libinit(void);
