@@ -23,7 +23,7 @@ static thread_node **threads;
 static ucontext_t main_t; // store the main thread seperately 
 static int current, count, size;
 
-#define STACKSIZE 32768
+#define STACKSIZE 131072
 
 static void array_resize() {
 	// resizes an array of contexts
@@ -123,11 +123,11 @@ int ta_waitall(void) {
    ***************************** */
 
 void ta_sem_init(tasem_t *sem, int value) {
-	sem = malloc(sizeof(tasem_t)); // allocate space for the semaphore
+	sem = malloc(sizeof(tasem_t));
 	sem->value = value; 
 	sem->num_blocked = 0;
 	sem->current = 0;
-	sem->blocked = malloc(sizeof(thread_node)*32);
+	sem->blocked = malloc(32*sizeof(thread_node *));
 }
 
 void ta_sem_destroy(tasem_t *sem) {
@@ -147,7 +147,7 @@ void ta_sem_post(tasem_t *sem) {
 
 void ta_sem_wait(tasem_t *sem) {
 	if (sem->value == 0){ 
-		sem->blocked[sem->num_blocked] = threads[current];
+		sem->blocked[(sem->num_blocked)] = threads[current];
 		threads[current]->block = 1;
 		ta_yield();
 	}
