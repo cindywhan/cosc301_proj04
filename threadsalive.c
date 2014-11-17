@@ -23,11 +23,12 @@ static thread_node **threads;
 static ucontext_t main_t; // store the main thread seperately 
 static int current, count, size;
 
-#define STACKSIZE 8192
+#define STACKSIZE 16384
 
 static void array_resize() {
 	// resizes an array of contexts
 	thread_node **new = malloc(size*2*sizeof(thread_node *)); //double the size of the array
+
 	// copy over all the existing threads
 	for (int i = 0; i < size; i++){
 		new[i] = threads[i];
