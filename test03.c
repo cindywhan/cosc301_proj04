@@ -22,9 +22,12 @@ void thread1(void *v)
     fprintf(stderr, "thread1 started up\n");
 
     ta_lock(&mutex);
+    printf("so here?\n");
     ta_yield();
+    printf("or here?\n");
     while (value == 0)
     {
+    	  printf("frick\n");
         fprintf(stderr, "thread1 going into cond_wait()\n");
         ta_wait(&mutex, &condv);
     }

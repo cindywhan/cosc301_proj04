@@ -23,7 +23,9 @@ static thread_node **threads;
 static ucontext_t main_t; // store the main thread seperately 
 static int current, count, size;
 
+
 #define STACKSIZE 32768
+
 
 static void array_resize() {
 	// resizes an array of contexts
@@ -97,8 +99,9 @@ void ta_yield(void) {
 	swapcontext(&threads[curr]->ctx, &threads[current]->ctx);
   	return;
 }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
-int ta_waitall(void) {
+
+//waits for all other threads to finish; returns 0 if all threads have completed; returns -1 if there are threads but aren't runnable
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          int ta_waitall(void) {
 	// run all ready threads
 	do {
 		// switch to next thread
@@ -121,6 +124,7 @@ int ta_waitall(void) {
      stage 2 library functions
    ***************************** */
 
+//creates and initializes a semaphore
 void ta_sem_init(tasem_t *sem, int value) {
 	sem->count = value; 
 	sem->num_blocked = 0;
@@ -128,11 +132,13 @@ void ta_sem_init(tasem_t *sem, int value) {
 	sem->blocked = malloc(16*sizeof(thread_node *));
 }
 
+//destroys semaphore and frees
 void ta_sem_destroy(tasem_t *sem) {
 	free(sem->blocked);
 	free(sem); // free the space
 }
 
+//increases semaphore value atomically
 void ta_sem_post(tasem_t *sem) {
 	sem->count++;
 	// release a blocked thread
@@ -144,28 +150,31 @@ void ta_sem_post(tasem_t *sem) {
 
 void ta_sem_wait(tasem_t *sem) {
 	if (sem->count == 0){ 
+	//if semaphore value is zero, block and yield processor to next ready thread
 		sem->blocked[(sem->num_blocked)] = threads[current];
 		threads[current]->block = 1;
 		ta_yield();
 	}
-	sem->count--;
+	sem->count--; //decrements by one when value is greater than zero
 }
 
+//initializes a lock
 void ta_lock_init(talock_t *mutex) {
 	mutex->sem = malloc(sizeof(tasem_t));
 	ta_sem_init(mutex->sem, 1);
 }
 
+//destroys and frees lock
 void ta_lock_destroy(talock_t *mutex) {
 	ta_sem_destroy(mutex->sem);
 }
 
-
-
+//lock
 void ta_lock(talock_t *mutex) {
 	ta_sem_wait(mutex->sem);
 }
 
+//unlock
 void ta_unlock(talock_t *mutex) {
 	ta_sem_post(mutex->sem);
 }
@@ -174,16 +183,25 @@ void ta_unlock(talock_t *mutex) {
      stage 3 library functions
    ***************************** */
 
+//create and initialize condition variable
 void ta_cond_init(tacond_t *cond) {
-	
+	ta_sem_init(cond->sem, 0);
 }
 
+//destroy condition variable 
 void ta_cond_destroy(tacond_t *cond) {
+	ta_sem_destroy(cond->sem);
 }
 
+//wait on condition variable until another thread calls ta_signal()
 void ta_wait(talock_t *mutex, tacond_t *cond) {
+	ta_lock(mutex);
+	ta_sem_wait(cond->sem);
+	ta_unlock(mutex);
 }
 
+//wake one thread
 void ta_signal(tacond_t *cond) {
+	ta_sem_post(cond->sem);
 }
 
