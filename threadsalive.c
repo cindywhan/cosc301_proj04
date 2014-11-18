@@ -135,7 +135,6 @@ void ta_sem_init(tasem_t *sem, int value) {
 //destroys semaphore and frees
 void ta_sem_destroy(tasem_t *sem) {
 	free(sem->blocked);
-	free(sem); // free the space
 }
 
 //increases semaphore value atomically
@@ -167,6 +166,7 @@ void ta_lock_init(talock_t *mutex) {
 //destroys and frees lock
 void ta_lock_destroy(talock_t *mutex) {
 	ta_sem_destroy(mutex->sem);
+	free(mutex->sem);
 }
 
 //lock
