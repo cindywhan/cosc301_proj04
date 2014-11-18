@@ -23,7 +23,7 @@ static thread_node **threads;
 static ucontext_t main_t; // store the main thread seperately 
 static int current, count, size;
 
-#define STACKSIZE 131072
+#define STACKSIZE 16384
 
 static void array_resize() {
 	// resizes an array of contexts
@@ -123,7 +123,6 @@ int ta_waitall(void) {
    ***************************** */
 
 void ta_sem_init(tasem_t *sem, int value) {
-	sem = malloc(sizeof(tasem_t));
 	sem->value = value; 
 	sem->num_blocked = 0;
 	sem->current = 0;
@@ -162,8 +161,6 @@ void ta_lock_destroy(talock_t *mutex) {
 	ta_sem_destroy(mutex->sem);
 }
 
-
-
 void ta_lock(talock_t *mutex) {
 	ta_sem_wait(mutex->sem);
 }
@@ -177,15 +174,20 @@ void ta_unlock(talock_t *mutex) {
    ***************************** */
 
 void ta_cond_init(tacond_t *cond) {
-	
+	ta_sem_init(cond->sem, 0);
 }
 
 void ta_cond_destroy(tacond_t *cond) {
+	ta_sem_destroy(cond->sem);
 }
 
 void ta_wait(talock_t *mutex, tacond_t *cond) {
+	ta_unlock(mutex);
+	ta_sem_wait(cond->sem);
+	ta_lock(mutex);
 }
 
 void ta_signal(tacond_t *cond) {
+	ta_sem_post(cond->sem);
 }
 

@@ -19,10 +19,8 @@ typedef struct {
 	struct tasem_t *sem;
 } talock_t;
 
-
-
 typedef struct {
-
+	struct tasem_t *sem;
 } tacond_t;
 
 
