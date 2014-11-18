@@ -3,6 +3,11 @@
  Cosc 301
  Proj 04
  11/17/2014 
+ 
+ 
+ Part 1: Cindy wrote the code and Junghyun made edits
+ Part 2: Jugnhyun wrote the code and Cindy made edits
+ Part 3: Jugnhyun wrote the code and Cindy made edits
  */
 
 #include <stdio.h>
@@ -150,11 +155,14 @@ void ta_sem_post(tasem_t *sem) {
 void ta_sem_wait(tasem_t *sem) {
 	if (sem->count == 0){ 
 	//if semaphore value is zero, block and yield processor to next ready thread
-		sem->blocked[(sem->num_blocked)] = threads[current];
-		threads[current]->block = 1;
+		if (current != -1){
+			sem->blocked[(sem->num_blocked)] = threads[current];
+			threads[current]->block = 1;
+		}
 		ta_yield();
 	}
 	sem->count--; //decrements by one when value is greater than zero
+
 }
 
 //initializes a lock
@@ -185,23 +193,24 @@ void ta_unlock(talock_t *mutex) {
 
 //create and initialize condition variable
 void ta_cond_init(tacond_t *cond) {
-	ta_sem_init(&cond->sem, 0);
+	cond->sem = malloc(sizeof(tasem_t));
+	ta_sem_init(cond->sem, 0);
 }
 
 //destroy condition variable 
 void ta_cond_destroy(tacond_t *cond) {
-	ta_sem_destroy(&cond->sem);
+	ta_sem_destroy(cond->sem);
 }
 
 //wait on condition variable until another thread calls ta_signal()
 void ta_wait(talock_t *mutex, tacond_t *cond) {
-	ta_unlock(&mutex);
-	ta_sem_wait(&cond->sem);
-	ta_lock(&mutex);
+	ta_lock(mutex);
+	ta_sem_wait(cond->sem);
+	ta_unlock(mutex);
 }
 
 //wake one thread
 void ta_signal(tacond_t *cond) {
-	ta_sem_post(&cond->sem);
+	ta_sem_post(cond->sem);
 }
 

@@ -22,15 +22,11 @@ void thread1(void *v)
     fprintf(stderr, "thread1 started up\n");
 
     ta_lock(&mutex);
-    printf("so here?\n");
     ta_yield();
-    printf("or here?\n");
     while (value == 0)
     {
-    	  printf("frick\n");
         fprintf(stderr, "thread1 going into cond_wait()\n");
         ta_wait(&mutex, &condv);
-        printf("wait, what?\n");
     }
    
     fprintf(stderr, "thread1 emerged from cond_wait()\n");
@@ -66,16 +62,11 @@ void thread2(void *v)
 
 int main(int argc, char **argv)
 {
-    printf("Tester for stage 3.\n");
     ta_libinit();
-    printf("seriously?\n");
     ta_lock_init(&mutex);
-    printf("YOU WERE WORKING BEFORE\n");
     ta_cond_init(&condv);
-    printf("we getting here?\n");
 
     ta_create(thread1, NULL);
-    printf("what about here?\n");
     ta_create(thread2, NULL);
 
     int rv = ta_waitall();
