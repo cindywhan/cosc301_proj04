@@ -185,23 +185,23 @@ void ta_unlock(talock_t *mutex) {
 
 //create and initialize condition variable
 void ta_cond_init(tacond_t *cond) {
-	ta_sem_init(cond->sem, 0);
+	ta_sem_init(&cond->sem, 0);
 }
 
 //destroy condition variable 
 void ta_cond_destroy(tacond_t *cond) {
-	ta_sem_destroy(cond->sem);
+	ta_sem_destroy(&cond->sem);
 }
 
 //wait on condition variable until another thread calls ta_signal()
 void ta_wait(talock_t *mutex, tacond_t *cond) {
-	ta_lock(mutex);
-	ta_sem_wait(cond->sem);
-	ta_unlock(mutex);
+	ta_unlock(&mutex);
+	ta_sem_wait(&cond->sem);
+	ta_lock(&mutex);
 }
 
 //wake one thread
 void ta_signal(tacond_t *cond) {
-	ta_sem_post(cond->sem);
+	ta_sem_post(&cond->sem);
 }
 
