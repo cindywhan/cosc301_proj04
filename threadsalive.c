@@ -5,9 +5,9 @@
  11/17/2014 
  
  
- Part 1: Cindy wrote the code and Junghyun made edits
- Part 2: Jugnhyun wrote the code and Cindy made edits
- Part 3: Jugnhyun wrote the code and Cindy made edits
+ Part 1: Cindy wrote most of part 1, Junghyun fixed the segfaults
+ Part 2: Junghyun wrote the code for part 2. Cindy reworked some of the lock functions using the semaphore. Cindy and Junghyun worked together to fix the errors
+ Part 3: Junghyun wrote the code and Cindy helped with the segfaults. 
  */
 
 #include <stdio.h>
