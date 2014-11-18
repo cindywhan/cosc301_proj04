@@ -23,12 +23,11 @@ static thread_node **threads;
 static ucontext_t main_t; // store the main thread seperately 
 static int current, count, size;
 
-#define STACKSIZE 131072
+#define STACKSIZE 32768
 
 static void array_resize() {
 	// resizes an array of contexts
 	thread_node **new = malloc(size*2*sizeof(thread_node *)); //double the size of the array
-
 	// copy over all the existing threads
 	for (int i = 0; i < size; i++){
 		new[i] = threads[i];
@@ -123,38 +122,37 @@ int ta_waitall(void) {
    ***************************** */
 
 void ta_sem_init(tasem_t *sem, int value) {
-	sem = malloc(sizeof(tasem_t));
-	sem->value = value; 
+	sem->count = value; 
 	sem->num_blocked = 0;
 	sem->current = 0;
-	sem->blocked = malloc(32*sizeof(thread_node *));
+	sem->blocked = malloc(16*sizeof(thread_node *));
 }
 
 void ta_sem_destroy(tasem_t *sem) {
 	free(sem->blocked);
 	free(sem); // free the space
-	
 }
 
 void ta_sem_post(tasem_t *sem) {
-	sem->value++;
+	sem->count++;
 	// release a blocked thread
 	if (sem->num_blocked > 0){
 		sem->blocked[current]->block = 0;
-		sem->current++;
+		sem->count++;
 	}
 }
 
 void ta_sem_wait(tasem_t *sem) {
-	if (sem->value == 0){ 
+	if (sem->count == 0){ 
 		sem->blocked[(sem->num_blocked)] = threads[current];
 		threads[current]->block = 1;
 		ta_yield();
 	}
-	sem->value--;
+	sem->count--;
 }
 
 void ta_lock_init(talock_t *mutex) {
+	mutex->sem = malloc(sizeof(tasem_t));
 	ta_sem_init(mutex->sem, 1);
 }
 

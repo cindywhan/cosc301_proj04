@@ -9,7 +9,7 @@
         type definitions
    *************************** */
 typedef struct tasem_t{
-	int value;
+	int count;
 	int num_blocked;
 	int current;
 	struct thread_node **blocked;
