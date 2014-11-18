@@ -204,9 +204,9 @@ void ta_cond_destroy(tacond_t *cond) {
 
 //wait on condition variable until another thread calls ta_signal()
 void ta_wait(talock_t *mutex, tacond_t *cond) {
-	ta_lock(mutex);
-	ta_sem_wait(cond->sem);
 	ta_unlock(mutex);
+	ta_sem_wait(cond->sem);
+	ta_lock(mutex);
 }
 
 //wake one thread
